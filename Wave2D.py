@@ -46,8 +46,8 @@ class Wave2D:
         self.create_mesh(N)
         self.mx, self.my = mx, my
         ue_fun = sp.lambdify((x, y, t), self.ue(mx, my), "numpy")
-        self.unm1 = ue_fun(self.xij, self.yij, 0.0)
-        self.un   = ue_fun(self.xij, self.yij, self.dt)
+        self.unm1 = ue_fun(self.xij, self.yij, -self.dt) 
+        self.un   = ue_fun(self.xij, self.yij,  0.0)      
         return self.un, self.unm1
 
     @property
@@ -173,6 +173,7 @@ class Wave2D_Neumann(Wave2D):
 
     def apply_bcs(self):
         return
+        
 def test_convergence_wave2d():
     sol = Wave2D()
     r, E, h = sol.convergence_rates(mx=2, my=3)
@@ -184,4 +185,6 @@ def test_convergence_wave2d_neumann():
     assert abs(r[-1]-2) < 0.05
 
 def test_exact_wave2d():
-    raise NotImplementedError
+    sol = Wave2D()
+    h, err = sol(N=16, Nt=10, cfl=0.1, mx=2, my=3, store_data=-1)
+    assert err[-1] < 1e-3
