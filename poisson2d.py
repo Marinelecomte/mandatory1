@@ -149,8 +149,8 @@ class Poisson2D:
         """
         h = self.h
         N = self.N
-        xq = float(min(max(xq, 0.0), self.L))
-        yq = float(min(max(yq, 0.0), self.L))
+        xq = float(min(max(x, 0.0), self.L))
+        yq = float(min(max(y, 0.0), self.L))
         i = min(int(np.floor(xq / h)), N-1)
         j = min(int(np.floor(yq / h)), N-1)
         xi = i * h
