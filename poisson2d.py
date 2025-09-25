@@ -149,13 +149,12 @@ class Poisson2D:
         """
         h = self.h
         N = self.N
-        xq = min(max(xq, 0.0), self.L)
-        yq = min(max(yq, 0.0), self.L)
-        i = int(np.floor(xq / h))
-        j = int(np.floor(yq / h))
-        if i == N: i -= 1
-        if j == N: j -= 1
-        xi, yi = i*h, j*h
+        xq = float(min(max(xq, 0.0), self.L))
+        yq = float(min(max(yq, 0.0), self.L))
+        i = min(int(np.floor(xq / h)), N-1)
+        j = min(int(np.floor(yq / h)), N-1)
+        xi = i * h
+        yi = j * h
         sx = (xq - xi) / h
         sy = (yq - yi) / h
         U = self.U
