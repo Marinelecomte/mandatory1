@@ -33,28 +33,62 @@ class Poisson2D:
     def create_mesh(self, N):
         """Create 2D mesh and store in self.xij and self.yij"""
         # self.xij, self.yij ...
-        raise NotImplementedError
+        self.N = N
+        self.h = self.L / N
+        x1d = np.linspace(0.0, self.L, N+1)
+        y1d = np.linspace(0.0, self.L, N+1)
+        self.xij, self.yij = np.meshgrid(x1d, y1d, indexing="ij")
 
     def D2(self):
         """Return second order differentiation matrix"""
-        raise NotImplementedError
+        N = self.N
+        Dx2 = sparse.diags([np.ones(N+1), -2*np.ones(N+1), np.ones(N+1)],
+                       offsets=[-1, 0, 1], shape=(N+1, N+1), format="csr")
+        return Dx2
 
     def laplace(self):
         """Return vectorized Laplace operator"""
-        raise NotImplementedError
-
+        N = self.N
+        Dx2 = self.D2()
+        I = sparse.eye(N+1, format="csr")
+        L = sparse.kron(I, Dx2, format="csr") + sparse.kron(Dx2, I, format="csr")
+        return (1.0 / self.h**2) * L
+    
     def get_boundary_indices(self):
         """Return indices of vectorized matrix that belongs to the boundary"""
-        raise NotImplementedError
-
+        N = self.N
+        idx = []
+        for i in range(N+1):
+            for j in range(N+1):
+                if i == 0 or i == N or j == 0 or j == N:
+                    idx.append(i*(N+1) + j)  
+        return np.array(idx, dtype=int)
+    
     def assemble(self):
         """Return assembled matrix A and right hand side vector b"""
-        # return A, b
-        raise NotImplementedError
+        N = self.N
+        A = self.laplace().tocsr()
+  
+        f_fun  = sp.lambdify((x, y), self.f,  "numpy")
+        ue_fun = sp.lambdify((x, y), self.ue, "numpy")
+        b = f_fun(self.xij, self.yij).astype(float).ravel()
+    
+        bnd = self.get_boundary_indices()
+        A = A.tolil()
+        for k in bnd:
+            A.rows[k] = [k]
+            A.data[k] = [1.0]
+            i = k // (N+1)
+            j = k %  (N+1)
+            b[k] = float(ue_fun(self.xij[i, j], self.yij[i, j]))
+        A = A.tocsr()
+        return A, b
 
     def l2_error(self, u):
         """Return l2-error norm"""
-        raise NotImplementedError
+        ue_fun = sp.lambdify((x, y), self.ue, "numpy")
+        ue_vals = ue_fun(self.xij, self.yij).astype(float)
+        return np.sqrt(np.mean((u - ue_vals)**2))
 
     def __call__(self, N):
         """Solve Poisson's equation.
@@ -113,7 +147,20 @@ class Poisson2D:
         The value of u(x, y)
 
         """
-        raise NotImplementedError
+        h = self.h
+        N = self.N
+        xq = min(max(xq, 0.0), self.L)
+        yq = min(max(yq, 0.0), self.L)
+        i = int(np.floor(xq / h))
+        j = int(np.floor(yq / h))
+        if i == N: i -= 1
+        if j == N: j -= 1
+        xi, yi = i*h, j*h
+        sx = (xq - xi) / h
+        sy = (yq - yi) / h
+        U = self.U
+        val = ((1-sx)*(1-sy)*U[i, j] + (sx)*(1-sy)*U[i+1, j] + (1-sx)*(sy)*U[i, j+1] + (sx)*(sy)*U[i+1, j+1])
+        return float(val)
 
 def test_convergence_poisson2d():
     # This exact solution is NOT zero on the entire boundary
