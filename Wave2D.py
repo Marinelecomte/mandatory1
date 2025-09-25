@@ -11,16 +11,23 @@ class Wave2D:
     def create_mesh(self, N, sparse=False):
         """Create 2D mesh and store in self.xij and self.yij"""
         # self.xji, self.yij = ...
-        raise NotImplementedError
+    x = np.linspace(0, 1, N+1)
+    y = np.lispcace(0, 1, N+1)
+    self.dx = 1/N
+    self.dy = 1/N
+    self.xij, self.yij = np.meshgrid(x, y, indexing="ij")
 
     def D2(self, N):
         """Return second order differentiation matrix"""
-        raise NotImplementedError
+        Dx2 = sparse.diags([np.ones(N+1), -2*np.ones(N+1), np.ones(N+1)],
+                           offsets=[-1, 0, 1], shape=(N+1, N+1), format="csr")
+        I = sparse.eye(N+1, format="csr")
+        return sparse.kron(I, Dx2, format="csr") + sparse.kron(Dx2, I, format="csr")
 
     @property
     def w(self):
         """Return the dispersion coefficient"""
-        raise NotImplementedError
+        return self.c * np.pi * np.sqrt(self.mx**2 + self.my**2)
 
     def ue(self, mx, my):
         """Return the exact standing wave"""
@@ -36,12 +43,17 @@ class Wave2D:
         mx, my : int
             Parameters for the standing wave
         """
-        raise NotImplementedError
+        self.create_mesh(N)
+        self.mx, self.my = mx, my
+        ue_fun = sp.lambdify((x, y, t), self.ue(mx, my), "numpy")
+        self.unm1 = ue_fun(self.xij, self.yij, 0.0)
+        self.un   = ue_fun(self.xij, self.yij, self.dt)
+        return self.un, self.unm1
 
     @property
     def dt(self):
         """Return the time step"""
-        raise NotImplementedError
+        return self.cfl * min(self.dx, self.dy) / self.c
 
     def l2_error(self, u, t0):
         """Return l2-error norm
@@ -53,10 +65,15 @@ class Wave2D:
         t0 : number
             The time of the comparison
         """
-        raise NotImplementedError
-
+        ue_fun = sp.lambdify((x, y, t), self.ue(self.mx, self.my), "numpy")
+        ue_vals = ue_fun(self.xij, self.yij, t0)
+        return np.sqrt(np.mean((u - ue_vals)**2))
+        
     def apply_bcs(self):
-        raise NotImplementedError
+        self.unp1[0,  :] = 0
+        self.unp1[-1, :] = 0
+        self.unp1[:,  0] = 0
+        self.unp1[:, -1] = 0
 
     def __call__(self, N, Nt, cfl=0.5, c=1.0, mx=3, my=3, store_data=-1):
         """Solve the wave equation
@@ -83,7 +100,29 @@ class Wave2D:
         If store_data > 0, then return a dictionary with key, value = timestep, solution
         If store_data == -1, then return the two-tuple (h, l2-error)
         """
-        raise NotImplementedError
+        self.cfl = cfl
+        self.c   = c
+        self.initialize(N, mx, my)
+        D = self.D2(N)
+        C = self.cfl  # C = c*dt/dx = cfl on uniform grid
+        data = {} if (store_data and store_data > 0) else None
+        errs = [] if store_data == -1 else None
+        if data is not None:
+            data[0] = self.unm1.copy()
+        for n in range(1, Nt+1):
+            lap_un = (D @ self.un.reshape(-1)).reshape(self.un.shape)
+            self.unp1 = 2.0*self.un - self.unm1 + (C**2)*lap_un
+            self.apply_bcs()
+            self.unm1, self.un = self.un, self.unp1
+            if data is not None and (n % store_data == 0):
+                data[n] = self.un.copy()
+            if errs is not None:
+                errs.append(self.l2_error(self.un, n*self.dt))
+        h = self.dx
+        if data is not None:
+            return data
+        else:
+            return h, np.array(errs)
 
     def convergence_rates(self, m=4, cfl=0.1, Nt=10, mx=3, my=3):
         """Compute convergence rates for a range of discretizations
@@ -121,14 +160,19 @@ class Wave2D:
 class Wave2D_Neumann(Wave2D):
 
     def D2(self, N):
-        raise NotImplementedError
-
+        Dx2 = sparse.diags([np.ones(N+1), -2*np.ones(N+1), np.ones(N+1)],
+                           offsets=[-1, 0, 1], shape=(N+1, N+1), format="lil")
+        Dx2[0, 0]  = -2; Dx2[0, 1]  =  2
+        Dx2[-1,-1] = -2; Dx2[-1,-2] =  2
+        Dx2 = Dx2.tocsr()
+        I = sparse.eye(N+1, format="csr")
+        return sparse.kron(I, Dx2, format="csr") + sparse.kron(Dx2, I, format="csr")
+   
     def ue(self, mx, my):
-        raise NotImplementedError
+         return sp.cos(mx*sp.pi*x)*sp.cos(my*sp.pi*y)*sp.cos(self.w*t)
 
     def apply_bcs(self):
-        raise NotImplementedError
-
+        return
 def test_convergence_wave2d():
     sol = Wave2D()
     r, E, h = sol.convergence_rates(mx=2, my=3)
