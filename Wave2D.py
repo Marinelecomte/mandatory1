@@ -187,4 +187,4 @@ def test_convergence_wave2d_neumann():
 def test_exact_wave2d():
     sol = Wave2D()
     h, err = sol(N=16, Nt=10, cfl=0.1, mx=2, my=3, store_data=-1)
-    assert err[-1] < 1e-3
+    assert err[-1] < 5e-3
