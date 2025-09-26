@@ -23,7 +23,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pytest numpy sympy matplotlib scipy jupyter ipykernel plotly pandas
+        pip install pytest numpy sympy matplotlib scipy pillow jupyter ipykernel plotly pandas
     - name: Test with pytest
       run: |
         pytest Wave2D.py poisson2d.py 
