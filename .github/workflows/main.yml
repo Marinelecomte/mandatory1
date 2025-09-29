@@ -27,6 +27,9 @@ jobs:
     - name: Test with pytest
       run: |
         pytest Wave2D.py poisson2d.py neumann_movie.py
-    - name: Check that GIF exists
-      run: |
-        test -f report/neumannwave.gif
+    - name: Upload GIF artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: neumannwave
+        path: report/neumannwave.gif
+
