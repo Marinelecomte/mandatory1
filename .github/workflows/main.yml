@@ -26,4 +26,4 @@ jobs:
         pip install pytest numpy sympy matplotlib scipy pillow jupyter ipykernel plotly pandas
     - name: Test with pytest
       run: |
-        pytest Wave2D.py poisson2d.py
+        pytest Wave2D.py poisson2d.py Neumanwave.gif
