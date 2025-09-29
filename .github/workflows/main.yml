@@ -27,3 +27,6 @@ jobs:
     - name: Test with pytest
       run: |
         pytest Wave2D.py poisson2d.py neumann_movie.py
+    - name: Check that GIF exists
+      run: |
+        test -f report/neumannwave.gif
