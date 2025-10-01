@@ -44,7 +44,7 @@ def main():
     ani = animation.FuncAnimation(fig, update, frames=len(frames),
                                   interval=1000.0/max(fps, 1), blit=True)
 
-    out_path = "report/neumannwave.gif"   # ensure report/ exists beforehand
+    out_path = "report/neumannwave.gif"   
     ani.save(out_path, writer="pillow", fps=fps,
              savefig_kwargs={"dpi": dpi, "bbox_inches": "tight"})
     print(f"Saved {out_path}")
