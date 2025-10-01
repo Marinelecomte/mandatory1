@@ -1,30 +1,23 @@
+import os
 import numpy as np
+import matplotlib
+matplotlib.use("Agg")  # headless backend for GitHub runners
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from Wave2D import Wave2D_Neumann
 
-N  = 60        
-Nt = 120       
-cfl = 0.5     
-c   = 1.0     
-mx  = 2       
-my  = 3     
-store_every = 2  
+N, Nt, cfl, c, mx, my, store_every = 60, 120, 0.5, 1.0, 2, 3, 2
+fps, figsize, dpi, cmap = 10, (4, 4), 70, "viridis"
+OUT_PATH = "neumannwave.gif"  # save to repo root
 
-fps = 10      
-figsize = (4, 4)
-dpi = 70
-cmap = "viridis"
-
-
-def main():
+def main(output_path: str = OUT_PATH):
     solver = Wave2D_Neumann()
     data = solver(N=N, Nt=Nt, cfl=cfl, c=c, mx=mx, my=my, store_data=store_every)
     if not isinstance(data, dict) or len(data) == 0:
         raise RuntimeError("Expected snapshots {tstep: U}. Call with store_data > 0.")
 
     steps  = sorted(data.keys())
-    frames = [data[k] for k in steps]
+    frames = [np.asarray(data[k]) for k in steps]
 
     vmax = max(abs(frames[0]).max(), abs(frames[-1]).max())
     vmin = -vmax
@@ -43,11 +36,11 @@ def main():
     ani = animation.FuncAnimation(fig, update, frames=len(frames),
                                   interval=1000.0/max(fps, 1), blit=True)
 
-    out_path = "neumannwave.gif"
-    ani.save(out_path, writer="pillow", fps=fps,
-             savefig_kwargs={"dpi": dpi, "bbox_inches": "tight"})
-    print(f"Saved {out_path}")
-
+    writer = animation.PillowWriter(fps=fps, metadata={"artist": "neumann_movie"})
+    ani.save(output_path, writer=writer, dpi=dpi, savefig_kwargs={"bbox_inches": "tight"})
+    plt.close(fig)
+    size = os.path.getsize(output_path)
+    print(f"[ok] Saved {output_path} ({size} bytes)")
 
 if __name__ == "__main__":
     main()
