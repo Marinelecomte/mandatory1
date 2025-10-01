@@ -1,1 +1,1 @@
-![movie](https://github.com/Marinelecomte/mandatory1/actions/workflows/README.md/neumannwave.gif)
+![movie](https://github.com/Marinelecomte/mandatory1/blob/main/report/neumannwave.gif)
