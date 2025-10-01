@@ -44,8 +44,8 @@ def main():
     ani = animation.FuncAnimation(fig, update, frames=len(frames),
                                   interval=1000.0/max(fps, 1), blit=True)
 
-    # Save directly as neumann.gif in the current directory
-    out_path = "neumann.gif"   
+    # Save directly as neumannwave.gif in the current directory
+    out_path = "neumannwave.gif"   
     ani.save(out_path, writer="pillow", fps=fps,
              savefig_kwargs={"dpi": dpi, "bbox_inches": "tight"})
     print(f"Saved {out_path}")
