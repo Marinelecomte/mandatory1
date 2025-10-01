@@ -1,0 +1,38 @@
+name: Build GIF
+
+on:
+  workflow_dispatch: {}
+  push:
+    paths:
+      - 'neumann_movie.py'
+      - 'Wave2D.py'
+      - 'poisson2d.py'
+
+jobs:
+  build-gif:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy matplotlib pillow pytest
+
+      - name: Run tests
+        run: pytest Wave2D.py poisson2d.py neumann_movie.py -q
+
+      - name: Generate GIF
+        run: python neumann_movie.py
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: neumannwave
+          path: neumannwave.gif
+          if-no-files-found: error
