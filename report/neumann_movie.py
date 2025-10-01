@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from Wave2D import Wave2D_Neumann
 
-
 N  = 60        
 Nt = 120       
 cfl = 0.5     
