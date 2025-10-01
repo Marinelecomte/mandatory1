@@ -1,4 +1,4 @@
-- name: Upload GIF artifact
+name: Upload GIF artifact
   uses: actions/upload-artifact@v4
   with:
     name: neumannwave
