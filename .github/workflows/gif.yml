@@ -1,18 +1,26 @@
-name: Build GIF
+name: Build and Commit GIF
 
 on:
-  workflow_dispatch: {}
   push:
     paths:
       - 'neumann_movie.py'
       - 'Wave2D.py'
       - 'poisson2d.py'
+      - '.github/workflows/gif.yml'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write   # allow committing back to the repo
 
 jobs:
   build-gif:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -24,15 +32,36 @@ jobs:
           python -m pip install --upgrade pip
           pip install numpy matplotlib pillow pytest
 
+      # Keep tests simple; let pytest discover tests
       - name: Run tests
-        run: pytest Wave2D.py poisson2d.py neumann_movie.py -q
+        run: pytest -q
 
       - name: Generate GIF
         run: python neumann_movie.py
 
+      - name: Verify GIF is non-empty
+        run: |
+          test -f neumannwave.gif || (echo "GIF missing" && exit 1)
+          BYTES=$(stat -c%s neumannwave.gif)
+          echo "Size: $BYTES bytes"
+          # fail if suspiciously small
+          [ "$BYTES" -gt 2000 ] || (echo "GIF too small — likely blank" && exit 1)
+
+      - name: Commit GIF if changed
+        run: |
+          if git status --porcelain | grep -q 'neumannwave.gif'; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add neumannwave.gif
+            git commit -m "Update neumannwave.gif (CI)"
+            git push
+          else
+            echo "No changes to neumannwave.gif"
+          fi
+
+      # Optional: still upload as artifact for easy download
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: neumannwave
           path: neumannwave.gif
-          if-no-files-found: error
