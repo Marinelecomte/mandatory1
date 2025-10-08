@@ -1,46 +1,63 @@
-import os
+import os, sys
 import numpy as np
 import matplotlib
-matplotlib.use("Agg")  # headless backend for GitHub runners
+matplotlib.use("Agg")  
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-from Wave2D import Wave2D_Neumann
+from mpl_toolkits.mplot3d import Axes3D  
 
-N, Nt, cfl, c, mx, my, store_every = 60, 120, 0.5, 1.0, 2, 3, 2
-fps, figsize, dpi, cmap = 10, (4, 4), 70, "viridis"
-OUT_PATH = "neumannwave.gif"  # save to repo root
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from Wave2D import Wave2D_Neumann  
+
+N, Nt = 60, 60
+cfl, c = 1.0 / np.sqrt(2.0), 1.0
+mx, my = 3, 3
+store_every = 5
+fps = 5
+figsize, dpi = (10, 8), 100
+
+OUT_PATH = os.path.join(os.path.dirname(__file__), "neumannwave.gif")
+
 
 def main(output_path: str = OUT_PATH):
-    solver = Wave2D_Neumann()
-    data = solver(N=N, Nt=Nt, cfl=cfl, c=c, mx=mx, my=my, store_data=store_every)
-    if not isinstance(data, dict) or len(data) == 0:
-        raise RuntimeError("Expected snapshots {tstep: U}. Call with store_data > 0.")
+    sol = Wave2D_Neumann()
+    results = sol(N=N, Nt=Nt, cfl=cfl, c=c, mx=mx, my=my, store_data=store_every)
 
-    steps  = sorted(data.keys())
-    frames = [np.asarray(data[k]) for k in steps]
+    if not isinstance(results, dict) or len(results) == 0:
+        raise RuntimeError("Expected {tstep: U} snapshots; call with store_data > 0.")
 
-    vmax = max(abs(frames[0]).max(), abs(frames[-1]).max())
-    vmin = -vmax
+    xij, yij = sol.xij, sol.yij
 
-    fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
-    im = ax.imshow(frames[0], vmin=vmin, vmax=vmax, cmap=cmap,
-                   origin="lower", extent=[0, 1, 0, 1], interpolation="nearest")
-    ax.set_title(f"Neumann wave: mx={mx}, my={my}, N={N}, CFL={cfl}")
-    ax.set_xlabel("x")
-    ax.set_ylabel("y")
+    tsteps = sorted(results.keys())
+    frames = [results[k] for k in tsteps]
 
-    def update(k):
-        im.set_data(frames[k])
-        return (im,)
+    amp = max(float(np.abs(F).max()) for F in frames)
 
-    ani = animation.FuncAnimation(fig, update, frames=len(frames),
-                                  interval=1000.0/max(fps, 1), blit=True)
+    fig = plt.figure(figsize=figsize, dpi=dpi)
+    ax = fig.add_subplot(111, projection="3d")
+    ax.set_title(f"Neumann wave: mx={mx}, my={my}, N={N}, CFL={cfl:.4f}")
+    ax.set_xlabel("x"); ax.set_ylabel("y"); ax.set_zlabel("u(x,y,t)")
+
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    ax.set_zlim(-amp, amp)          
+    ax.set_box_aspect((1, 1, 0.5)) 
+    ax.view_init(elev=25, azim=35)
+
+    artists = []
+    for F in frames:
+        wf = ax.plot_wireframe(xij, yij, F, rstride=2, cstride=2)
+        artists.append([wf])
+
+    ani = animation.ArtistAnimation(fig, artists, interval=400, blit=True, repeat_delay=1000)
 
     writer = animation.PillowWriter(fps=fps, metadata={"artist": "neumann_movie"})
     ani.save(output_path, writer=writer, dpi=dpi, savefig_kwargs={"bbox_inches": "tight"})
     plt.close(fig)
+
     size = os.path.getsize(output_path)
     print(f"[ok] Saved {output_path} ({size} bytes)")
+
 
 if __name__ == "__main__":
     main()
