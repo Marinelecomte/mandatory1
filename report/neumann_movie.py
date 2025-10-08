@@ -14,7 +14,7 @@ cfl, c = 1.0 / np.sqrt(2.0), 1.0
 mx, my = 3, 3
 store_every = 5
 fps = 5
-figsize, dpi = (10, 8), 100
+figsize, dpi = (6, 6), 100
 
 OUT_PATH = os.path.join(os.path.dirname(__file__), "neumannwave.gif")
 
